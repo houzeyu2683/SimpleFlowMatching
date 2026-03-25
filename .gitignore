@@ -1,3 +1,10 @@
+AnimateDiff-main/
+CFM-master/
+log/exp/checkpoint
+log/exp/version
+output-fid
+interview
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
