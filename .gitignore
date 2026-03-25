@@ -2,6 +2,7 @@ AnimateDiff-main/
 CFM-master/
 log/exp/checkpoint
 log/exp/version
+*.tfevents.*
 output-fid
 interview
 
