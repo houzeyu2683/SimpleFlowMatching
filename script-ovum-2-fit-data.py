@@ -1,5 +1,6 @@
 import material
 import ovum
+import torch
 import torch.distributed
 import os
 
@@ -9,10 +10,10 @@ device = f'cuda:{index}'
 
 hub = material.Hub()
 data = hub.getData(
-    number=1
+    number=256
 )
 validation = hub.getValidation(
-    number=1,
+    number=64,
     reproducibility=False
 )
 
@@ -22,14 +23,13 @@ model = torch.nn.parallel.DistributedDataParallel(
     model, device_ids=[index]
 )
 
-# model.loadWeight("./log/exp-0/checkpoint/5000.pt")
+# model.module.loadWeight("./log/exp-0/checkpoint/5000.pt")
 
 history = './log/exp-5'
 framework = ovum.Framework(model, device, history)
 
-
-snapshot = 10000
-total = 100000
+snapshot = 1000000
+total = -1
 accumulation = 1
 
 framework.fitWeight(data, snapshot, total, accumulation, validation)

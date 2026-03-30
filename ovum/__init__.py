@@ -1,6 +1,6 @@
 from ._model_ import *
 from ._framework_ import *
-
+from ._distribution_ import *
 __all__ = ['Model', 'Discriminator', 'Framework']
 
 
