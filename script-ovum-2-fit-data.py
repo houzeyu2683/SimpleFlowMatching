@@ -10,10 +10,10 @@ device = f'cuda:{index}'
 
 hub = material.Hub()
 data = hub.getData(
-    number=96
+    number=64
 )
 validation = hub.getValidation(
-    number=32,
+    number=16,
     reproducibility=False
 )
 
