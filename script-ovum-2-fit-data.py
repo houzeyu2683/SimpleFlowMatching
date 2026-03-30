@@ -13,7 +13,7 @@ data = hub.getData(
     number=128
 )
 validation = hub.getValidation(
-    number=64,
+    number=32,
     reproducibility=False
 )
 
