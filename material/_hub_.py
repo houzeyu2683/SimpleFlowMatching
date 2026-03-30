@@ -167,7 +167,7 @@ class Hub:
         batch = next(iter(data))
         return(batch)
     
-    bucket = '/kaggle/input/IoAF-set'
+    bucket = '/kaggle/input/datasets/houzeyu2683/ioaf-set'
     folder = 'IoAF/'
     # bucket = os.path.join(pathlib.Path.home(), 'Documents', 'Data Bucket')
     # folder = 'IoAF/'
