@@ -25,7 +25,7 @@ model = torch.nn.parallel.DistributedDataParallel(
 
 # model.module.loadWeight("./log/exp-0/checkpoint/5000.pt")
 
-history = './log/exp-5'
+history = './log/exp'
 framework = ovum.Framework(model, device, history)
 
 snapshot = 1000000
