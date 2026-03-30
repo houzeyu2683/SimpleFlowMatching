@@ -14,7 +14,7 @@ class Framework:
 
     def __init__(
         self,
-        model: torch.nn.Module,
+        model: torch.nn.parallel.DistributedDataParallel,
         device: str,
         history: str
     ) -> None:
@@ -55,7 +55,7 @@ class Framework:
         #
         # self.model = torch.compile(self.model)
         version = torch.optim.swa_utils.AveragedModel(
-            self.model,
+            self.model.module,
             multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(0.9999)
         )
         # dashboard
@@ -86,12 +86,10 @@ class Framework:
                     gradient.update()
                     # schedule.updateStep()
                     optimization.zero_grad()
-                    version.update_parameters(self.model)
+                    version.update_parameters(self.model.module)
                     pass
                 element = {
                     'Tolerance':  criteria['tolerance'],
-                    # 'Perceptual': criteria['perceptual'],
-                    # 'Stillness':  criteria['stillness'],
                     'Total':      criteria['total'],
                 }
                 dashboard.insertStatistic('Loss/Data', element, number)
@@ -105,8 +103,6 @@ class Framework:
                 #
                 element = {
                     'Tolerance':  criteria['tolerance'],
-                    # 'Perceptual': criteria['perceptual'],
-                    # 'Stillness':  criteria['stillness'],
                     'Total':      criteria['total'],
                 }
                 dashboard.insertStatistic(
@@ -119,15 +115,17 @@ class Framework:
                     path = os.path.join(
                         self.history, 'checkpoint', f'{number}.pt'
                     )
-                    self.saveCheckpoint(self.model.state_dict(), path)
+                    self.saveCheckpoint(
+                        getattr(self.model.module, 'state_dict')(), path
+                    )
                     # version
                     path = os.path.join(
                         self.history, 'version', f'{number}.pt'
                     )
-                    self.saveCheckpoint(version.state_dict(), path)
+                    self.saveCheckpoint(version.module.state_dict(), path)
                     pass
                 number += 1
-                if(total==-1 or total<number): continue
+                if(total==-1 or total>number): continue
                 termination = True
                 break
             _ = iteration
@@ -162,128 +160,128 @@ class Framework:
         safetensors.torch.save_file(weight, path)
         return(True)
     
-class Schedule:
+# class Schedule:
 
-    def __init__(
-        self, 
-        optimization: torch.optim.Optimizer, 
-        cycle: int,  # 每個週期迭代次數，也代表第一個週期的迭代次數。
-        ratio: float, # 週期縮放因子。
-        boundary: tuple,  # 學習率邊界，分別代表最小值與最大值。
-        decay: float, # 最大學習率衰減因子。
-        acceleration: int    # 從最小學習率到最大學習率會經過幾次迭代，首次啟動使用。
-    ) -> None:
-        self.optimization = optimization
-        self.cycle = cycle
-        self.ratio = ratio
-        self.boundary = boundary
-        self.decay = decay
-        self.acceleration = acceleration
-        return
+#     def __init__(
+#         self, 
+#         optimization: torch.optim.Optimizer, 
+#         cycle: int,  # 每個週期迭代次數，也代表第一個週期的迭代次數。
+#         ratio: float, # 週期縮放因子。
+#         boundary: tuple,  # 學習率邊界，分別代表最小值與最大值。
+#         decay: float, # 最大學習率衰減因子。
+#         acceleration: int    # 從最小學習率到最大學習率會經過幾次迭代，首次啟動使用。
+#     ) -> None:
+#         self.optimization = optimization
+#         self.cycle = cycle
+#         self.ratio = ratio
+#         self.boundary = boundary
+#         self.decay = decay
+#         self.acceleration = acceleration
+#         return
     
-    def activateStep(self) -> bool:
-        # # 在訓練 loop 之前要執行
-        # assert self.ratio > 1
-        valley, peak = self.boundary
-        if(self.acceleration == 0):
-            rate = peak
-            iteration = self.optimization.param_groups
-            for group in iteration: group['lr'] = rate
-            _ = iteration
-            #
-            acceleration = self.acceleration
-            total = 0
-            count = 1
-            index = 0
-            step = {
-                'total': total,
-                'acceleration': acceleration,
-                'rate': rate,
-                'cycle': {
-                    'index': index,
-                    'length': self.cycle, # 這個週期有幾個迭代要跑
-                    'count': count # 目前跑了幾個迭代
-                }
-            }
-            self.step = step
-            return(True)
-        rate = valley
-        iteration = self.optimization.param_groups
-        for group in iteration: group['lr'] = rate
-        _ = iteration
-        #
-        acceleration = self.acceleration
-        total = 0
-        count = 0
-        index = 0
-        step = {
-            'total': total,
-            'acceleration': acceleration,
-            'rate': rate,
-            'cycle': {
-                'index': index,
-                'length': self.cycle, # 這個週期有幾個迭代要跑
-                'count': count # 目前跑了幾個迭代
-            }
-        }
-        self.step = step
-        return(True)
+#     def activateStep(self) -> bool:
+#         # # 在訓練 loop 之前要執行
+#         # assert self.ratio > 1
+#         valley, peak = self.boundary
+#         if(self.acceleration == 0):
+#             rate = peak
+#             iteration = self.optimization.param_groups
+#             for group in iteration: group['lr'] = rate
+#             _ = iteration
+#             #
+#             acceleration = self.acceleration
+#             total = 0
+#             count = 1
+#             index = 0
+#             step = {
+#                 'total': total,
+#                 'acceleration': acceleration,
+#                 'rate': rate,
+#                 'cycle': {
+#                     'index': index,
+#                     'length': self.cycle, # 這個週期有幾個迭代要跑
+#                     'count': count # 目前跑了幾個迭代
+#                 }
+#             }
+#             self.step = step
+#             return(True)
+#         rate = valley
+#         iteration = self.optimization.param_groups
+#         for group in iteration: group['lr'] = rate
+#         _ = iteration
+#         #
+#         acceleration = self.acceleration
+#         total = 0
+#         count = 0
+#         index = 0
+#         step = {
+#             'total': total,
+#             'acceleration': acceleration,
+#             'rate': rate,
+#             'cycle': {
+#                 'index': index,
+#                 'length': self.cycle, # 這個週期有幾個迭代要跑
+#                 'count': count # 目前跑了幾個迭代
+#             }
+#         }
+#         self.step = step
+#         return(True)
 
-    def updateStep(self) -> bool:
-        total = self.step['total']
-        total += 1
-        if(total < self.acceleration):
-            valley, peak = self.boundary
-            delta = (peak - valley) * (total / (self.acceleration - 1))
-            rate = valley + delta 
-            pass
-        else:
-            length = self.step['cycle']['length']
-            count = self.step['cycle']['count']
-            index = self.step['cycle']['index']
-            if(count >= length): # 如果都做完計算下一個 cycle 的 length
-                index += 1
-                length = int(length * self.ratio)
-                count = 0
-                pass
-            valley, peak = self.boundary
-            maximum = peak * (self.decay ** index)
-            if(maximum <= valley): maximum = valley
-            delta = 1 + math.cos(math.pi * count / (length - 1))
-            rate = valley + 0.5 * (maximum - valley) * delta
-            count += 1
-            self.step['cycle']['count'] = count
-            self.step['cycle']['length'] = length
-            self.step['cycle']['index'] = index
-            pass
-        iteration = self.optimization.param_groups
-        for group in iteration: group['lr'] = rate
-        _ = iteration
-        # total += 1
-        self.step['rate'] = rate
-        self.step['total'] = total
-        return(True)
+#     def updateStep(self) -> bool:
+#         total = self.step['total']
+#         total += 1
+#         if(total < self.acceleration):
+#             valley, peak = self.boundary
+#             delta = (peak - valley) * (total / (self.acceleration - 1))
+#             rate = valley + delta 
+#             pass
+#         else:
+#             length = self.step['cycle']['length']
+#             count = self.step['cycle']['count']
+#             index = self.step['cycle']['index']
+#             if(count >= length): # 如果都做完計算下一個 cycle 的 length
+#                 index += 1
+#                 length = int(length * self.ratio)
+#                 count = 0
+#                 pass
+#             valley, peak = self.boundary
+#             maximum = peak * (self.decay ** index)
+#             if(maximum <= valley): maximum = valley
+#             delta = 1 + math.cos(math.pi * count / (length - 1))
+#             rate = valley + 0.5 * (maximum - valley) * delta
+#             count += 1
+#             self.step['cycle']['count'] = count
+#             self.step['cycle']['length'] = length
+#             self.step['cycle']['index'] = index
+#             pass
+#         iteration = self.optimization.param_groups
+#         for group in iteration: group['lr'] = rate
+#         _ = iteration
+#         # total += 1
+#         self.step['rate'] = rate
+#         self.step['total'] = total
+#         return(True)
 
-    def saveFigure(self, number: int, path: str) -> bool:
-        total = []
-        rate = []
-        self.activateStep()
-        total.append(self.step['total'])
-        rate.append(self.step['rate'])
-        for _ in range(number):
-            self.updateStep()
-            total.append(self.step['total'])
-            rate.append(self.step['rate'])
-            continue
-        # total = list(map(lambda item: item['total'], data))
-        # rate = list(map(lambda item: item['rate'], data))
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        figure = plotly.graph_objects.Figure()
-        figure.add_trace(plotly.graph_objects.Scatter(
-            x=total, y=rate, mode='lines')
-        )
-        figure.update_layout(xaxis_title='iteration', yaxis_title='rate')
-        figure.write_html(path)
-        return(True)
+#     def saveFigure(self, number: int, path: str) -> bool:
+#         total = []
+#         rate = []
+#         self.activateStep()
+#         total.append(self.step['total'])
+#         rate.append(self.step['rate'])
+#         for _ in range(number):
+#             self.updateStep()
+#             total.append(self.step['total'])
+#             rate.append(self.step['rate'])
+#             continue
+#         # total = list(map(lambda item: item['total'], data))
+#         # rate = list(map(lambda item: item['rate'], data))
+#         os.makedirs(os.path.dirname(path), exist_ok=True)
+#         figure = plotly.graph_objects.Figure()
+#         figure.add_trace(plotly.graph_objects.Scatter(
+#             x=total, y=rate, mode='lines')
+#         )
+#         figure.update_layout(xaxis_title='iteration', yaxis_title='rate')
+#         figure.write_html(path)
+#         return(True)
 
-    pass
+#     pass

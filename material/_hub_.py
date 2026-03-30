@@ -15,7 +15,7 @@ import diffusers
 
 def getCollation(queue: list) -> tensordict.TensorDict:
     bundle = {
-        'frame': [],
+        'target': [],
         'noise': []
     }
     iteration = enumerate(queue)
@@ -29,20 +29,20 @@ def getCollation(queue: list) -> tensordict.TensorDict:
             [0.5, 0.5, 0.5], 
             [0.5, 0.5, 0.5]
         )
-        frame = getDigit(
+        target = getDigit(
             torchvision.transforms.ToTensor()(image)
         )
         # index = torch.randperm(len(video)-1-25)[0]
         # frame = video[index:index+1+8]   # (1, 3, 64, 64)
-        noise = torch.randn_like(frame)
-        bundle['frame'] += [frame]
+        noise = torch.randn_like(target)
+        bundle['target'] += [target]
         bundle['noise'] += [noise]
         continue
     _ = iteration
-    frame = torch.stack(bundle['frame'])
+    target = torch.stack(bundle['target'])
     noise = torch.stack(bundle['noise'])
     source = {
-        'frame': frame,
+        'target': target,
         'noise': noise,
     }
     size = len(queue)
@@ -101,10 +101,11 @@ class Hub:
         path = os.path.join(self.bucket, self.folder, name)
         queue = Document(path).getQueue()
         unit = Unit(queue)
+        sampler = torch.utils.data.distributed.DistributedSampler(unit)
         data = torch.utils.data.DataLoader(
             dataset=unit,
             batch_size=number,
-            shuffle=True,
+            sampler=sampler,
             collate_fn=getCollation,
             drop_last=True,
             num_workers=8,

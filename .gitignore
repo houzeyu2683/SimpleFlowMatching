@@ -5,6 +5,7 @@ log/exp/version
 *.tfevents.*
 output-fid
 interview
+*.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
